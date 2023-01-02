@@ -6,6 +6,7 @@ import * as fs from 'node:fs'
 import { Exec, OctoClient } from './helpers/types'
 import { getPackageFolderName, getPackagePaths } from './helpers/package'
 import { exec as promisifiedExec } from './helpers/process'
+import { difference } from './helpers/array'
 
 type Params = {
   issueNumber: number
@@ -79,8 +80,4 @@ export default async function labelPr({
   }
 
   return Promise.all(promises)
-}
-
-function difference<T>(a: T[], b: T[]): T[] {
-  return a.filter((item) => !b.includes(item))
 }
