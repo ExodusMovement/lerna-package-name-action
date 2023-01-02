@@ -25,9 +25,13 @@ export default async function labelPr({
   filesystem = fs,
   exec = promisifiedExec,
 }: Params) {
+  core.debug(`Executing git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
   const { stdout } = await exec(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
+  core.debug(stdout)
 
   const packageFolderPaths = await getPackagePaths({ filesystem })
+  core.debug(`Package folder paths: ${packageFolderPaths}`)
+
   const changes = stdout.trim().split(' ')
 
   const affected = packageFolderPaths

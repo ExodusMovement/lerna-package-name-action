@@ -7,6 +7,7 @@ import * as core from '@actions/core'
 jest.mock('@actions/core', () => ({
   notice: jest.fn(),
   info: jest.fn(),
+  debug: jest.fn(),
 }))
 
 jest.mock('@actions/github', () => ({

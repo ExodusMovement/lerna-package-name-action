@@ -19,6 +19,8 @@ async function main() {
   const headSha = pullRequest.head.sha
   const baseSha = pullRequest.base.sha
 
+  core.debug(`Labelling PR ${pullRequest.number} with head sha ${headSha} and base sha ${baseSha}`)
+
   const client = github.getOctokit(repoToken)
 
   await labelPr({
