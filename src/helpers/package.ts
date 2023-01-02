@@ -7,10 +7,6 @@ type Params = {
   filesystem: typeof fs
 }
 
-type GetPackagePathsByFolderParams = {
-  packageRoots: string[]
-} & Params
-
 export async function getPackagePaths({ filesystem }: Params) {
   const packageRoots = await getPackageRoots({ filesystem })
   const paths = await Promise.all(
