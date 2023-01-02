@@ -1,0 +1,13 @@
+name: 'Lerna package name'
+description: 'This action labels PRs in a lerna monorepo with the package names they affect'
+inputs:
+  repoToken:
+    description: 'Token for the repository. Can be passed in using {{ secrets.GITHUB_TOKEN }}'
+    required: true
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
+author: 'ExodusMovement'
+branding:
+  icon: 'activity'
+  color: 'gray-dark'
