@@ -10,9 +10,11 @@
     "format": "prettier \"**/*.{js,json,md,ts,yml}\" --ignore-path .eslintignore --write",
     "format:check": "prettier --check \"**/*.{js,json,md,ts,yml}\" --ignore-path .eslintignore --loglevel warn"
   },
-  "devDependencies": {
+  "dependencies": {
     "@actions/core": "1.10.0",
-    "@actions/github": "5.1.1",
+    "@actions/github": "5.1.1"
+  },
+  "devDependencies": {
     "@exodus/eslint-config": "^3.0.0",
     "@exodus/prettier": "^0.1.5",
     "@octokit/plugin-rest-endpoint-methods": "^6.7.0",
