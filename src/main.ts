@@ -3,7 +3,7 @@ import * as github from '@actions/github'
 import labelPr from './label-pr'
 
 async function main() {
-  const repoToken = core.getInput('repoToken', { required: true })
+  const token = core.getInput('github-token', { required: true })
 
   const {
     payload: { pull_request: pullRequest },
@@ -21,7 +21,7 @@ async function main() {
 
   core.debug(`Labelling PR ${pullRequest.number} with head sha ${headSha} and base sha ${baseSha}`)
 
-  const client = github.getOctokit(repoToken)
+  const client = github.getOctokit(token)
 
   await labelPr({
     client,
