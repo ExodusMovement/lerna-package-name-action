@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           # required for diff
-          fetch-depth: 0 
+          fetch-depth: 0
       - name: Label PR
         uses: ExodusMovement/lerna-package-name-action
         with:
