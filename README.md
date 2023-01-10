@@ -1,3 +1,5 @@
+[![Checks](https://github.com/ExodusMovement/lerna-package-name-action/actions/workflows/release.yaml/badge.svg)](https://github.com/ExodusMovement/lerna-package-name-action/actions/workflows/checks.yaml)
+
 # Lerna package name action
 
 This action labels PRs in a lerna monorepo with the package names they affect
