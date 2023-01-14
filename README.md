@@ -1,4 +1,4 @@
-[![Checks](https://github.com/ExodusMovement/lerna-package-name-action/actions/workflows/release.yaml/badge.svg)](https://github.com/ExodusMovement/lerna-package-name-action/actions/workflows/checks.yaml)
+[![Checks](https://github.com/ExodusMovement/lerna-package-name-action/actions/workflows/checks.yml/badge.svg)](https://github.com/ExodusMovement/lerna-package-name-action/actions/workflows/checks.yml)
 
 # Lerna package name action
 
