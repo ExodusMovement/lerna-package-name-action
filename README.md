@@ -12,6 +12,9 @@ name: Label PR
 on:
   pull_request:
     types: [opened, synchronize]
+
+permissions: {}
+
 jobs:
   label:
     name: Label PR
