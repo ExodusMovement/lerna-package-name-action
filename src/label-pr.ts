@@ -17,6 +17,8 @@ type Params = {
   exec?: Exec
 }
 
+const HEX_LIKE_STRING = /^(?:[a-f0-9]{2})+$/
+
 export default async function labelPr({
   issueNumber,
   sha,
@@ -25,6 +27,9 @@ export default async function labelPr({
   filesystem = fs,
   exec = promisifiedExec,
 }: Params) {
+  if (!HEX_LIKE_STRING.test(baseSha) || !HEX_LIKE_STRING.test(sha))
+    throw new Error('Security: unexpected ref(s)')
+
   core.debug(`Executing git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
   const { stdout } = await exec(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
   core.debug(stdout)
