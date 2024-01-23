@@ -17,7 +17,7 @@ type Params = {
   exec?: Exec
 }
 
-const HEX_LIKE_STRING = /^(?:[a-f0-9]{2})+$/
+const HEX_LIKE_STRING = /^(?:[\da-f]{2})+$/
 
 export default async function labelPr({
   issueNumber,
