@@ -17,6 +17,8 @@ type Params = {
   exec?: Exec
 }
 
+const HEX_LIKE_STRING = /^(?:[\da-f]{2})+$/
+
 export default async function labelPr({
   issueNumber,
   sha,
@@ -25,6 +27,9 @@ export default async function labelPr({
   filesystem = fs,
   exec = promisifiedExec,
 }: Params) {
+  if (!HEX_LIKE_STRING.test(baseSha) || !HEX_LIKE_STRING.test(sha))
+    throw new Error('Security: unexpected ref(s)')
+
   core.debug(`Executing git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
   const { stdout } = await exec(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
   core.debug(stdout)
@@ -49,7 +54,7 @@ export default async function labelPr({
   const obsolete = difference(current, affected)
 
   if (affected.length > 0) {
-    await core.notice(`The following packages are affected: ${affected}`)
+    core.notice(`The following packages are affected: ${affected}`)
   }
 
   const promises = []
@@ -62,7 +67,7 @@ export default async function labelPr({
         labels: missing,
       })
     )
-    await core.notice(`The following labels will be added: ${missing}`)
+    core.notice(`The following labels will be added: ${missing}`)
   }
 
   if (obsolete.length > 0) {
@@ -75,11 +80,11 @@ export default async function labelPr({
         })
       )
     )
-    await core.notice(`The following labels will be removed: ${obsolete}`)
+    core.notice(`The following labels will be removed: ${obsolete}`)
   }
 
   if (promises.length === 0) {
-    await core.notice('Affected packages have not changed. Labels need not be updated.')
+    core.notice('Affected packages have not changed. Labels need not be updated.')
     return
   }
 

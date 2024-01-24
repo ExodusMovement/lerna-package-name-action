@@ -1,10 +1,14 @@
 name: 'Checks'
+
 on:
   push:
     branches:
       - main
   pull_request:
     types: [opened, synchronize]
+
+permissions:
+  contents: read
 
 jobs:
   main:
@@ -25,7 +29,9 @@ jobs:
       - name: Grant read access to private registry
         run: yarn config set --home 'npmRegistries["//registry.npmjs.org/"].npmAuthToken' "${{ secrets.NPM_TOKEN }}"
       - name: Install dependencies
-        run: yarn
+        run: yarn install --frozen-lockfile
+      - name: Test
+        run: yarn test
       - name: Format
         run: yarn format:check
       - name: Build

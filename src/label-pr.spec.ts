@@ -21,8 +21,8 @@ jest.mock('@actions/github', () => ({
 
 describe('labelPr', () => {
   const issueNumber = 32
-  const sha = 'head sha'
-  const baseSha = 'base sha'
+  const sha = 'fff19bfa1197410ce28486ee269d38ac3f9b24b5'
+  const baseSha = 'c89ec1569797c49c4573b4c2a0d5a18a2ef42b15'
 
   const mockRepo = {
     repo: 'Batcave',
