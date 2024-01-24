@@ -30,6 +30,8 @@ jobs:
         run: yarn config set --home 'npmRegistries["//registry.npmjs.org/"].npmAuthToken' "${{ secrets.NPM_TOKEN }}"
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+      - name: Test
+        run: yarn test
       - name: Format
         run: yarn format:check
       - name: Build
