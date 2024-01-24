@@ -54,7 +54,7 @@ export default async function labelPr({
   const obsolete = difference(current, affected)
 
   if (affected.length > 0) {
-    await core.notice(`The following packages are affected: ${affected}`)
+    core.notice(`The following packages are affected: ${affected}`)
   }
 
   const promises = []
@@ -67,7 +67,7 @@ export default async function labelPr({
         labels: missing,
       })
     )
-    await core.notice(`The following labels will be added: ${missing}`)
+    core.notice(`The following labels will be added: ${missing}`)
   }
 
   if (obsolete.length > 0) {
@@ -80,11 +80,11 @@ export default async function labelPr({
         })
       )
     )
-    await core.notice(`The following labels will be removed: ${obsolete}`)
+    core.notice(`The following labels will be removed: ${obsolete}`)
   }
 
   if (promises.length === 0) {
-    await core.notice('Affected packages have not changed. Labels need not be updated.')
+    core.notice('Affected packages have not changed. Labels need not be updated.')
     return
   }
 
