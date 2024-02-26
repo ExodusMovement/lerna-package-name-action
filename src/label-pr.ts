@@ -1,10 +1,11 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
+import { getPackagePaths } from '@exodus/lerna-utils'
 
 import * as fs from 'node:fs'
 
 import { Exec, OctoClient } from './helpers/types'
-import { getPackageFolderName, getPackagePaths } from './helpers/package'
+import { getPackageFolderName } from './helpers/package'
 import { exec as promisifiedExec } from './helpers/process'
 import { difference } from './helpers/array'
 
