@@ -43,5 +43,11 @@ module.exports = {
       },
       parser: '@typescript-eslint/parser',
     },
+    {
+      files: ['**/*.spec.ts'],
+      rules: {
+        '@typescript-eslint/no-non-null-assertion': 'off',
+      },
+    },
   ],
 }
