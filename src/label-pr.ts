@@ -19,6 +19,7 @@ type Params = {
 }
 
 const HEX_LIKE_STRING = /^(?:[\da-f]{2})+$/
+const MAX_LABELS_PER_PR = 100
 
 export default async function labelPr({
   issueNumber,
@@ -51,29 +52,28 @@ export default async function labelPr({
 
   const packageNames = new Set(packageFolderPaths.map((it) => getPackageFolderName(it)))
   const current = data.labels.map((label) => label.name).filter((label) => packageNames.has(label))
-  const missing = difference(affected, current)
   const obsolete = difference(current, affected)
+  let missing = difference(affected, current)
 
   if (affected.length > 0) {
     core.notice(`The following packages are affected: ${affected}`)
   }
 
-  const promises = []
-
-  if (missing.length > 0) {
-    promises.push(
-      client.rest.issues.addLabels({
-        ...github.context.repo,
-        issue_number: Number(issueNumber),
-        labels: missing,
-      })
+  if (data.labels.length + missing.length - obsolete.length > MAX_LABELS_PER_PR) {
+    missing = missing.slice(0, MAX_LABELS_PER_PR - data.labels.length + obsolete.length)
+    core.warning(
+      `Applying only ${missing.length} labels to avoid exceeding the maximum of ${MAX_LABELS_PER_PR} labels per PR`
     )
-    core.notice(`The following labels will be added: ${missing}`)
+  }
+
+  if (obsolete.length === 0 && missing.length === 0) {
+    core.notice('Affected packages have not changed. Labels need not be updated.')
+    return
   }
 
   if (obsolete.length > 0) {
-    promises.push(
-      ...obsolete.map((label) =>
+    await Promise.all(
+      obsolete.map((label) =>
         client.rest.issues.removeLabel({
           ...github.context.repo,
           issue_number: Number(issueNumber),
@@ -81,13 +81,15 @@ export default async function labelPr({
         })
       )
     )
-    core.notice(`The following labels will be removed: ${obsolete}`)
+    core.notice(`The following labels were removed: ${obsolete}`)
   }
 
-  if (promises.length === 0) {
-    core.notice('Affected packages have not changed. Labels need not be updated.')
-    return
+  if (missing.length > 0) {
+    await client.rest.issues.addLabels({
+      ...github.context.repo,
+      issue_number: Number(issueNumber),
+      labels: missing,
+    })
+    core.notice(`The following labels were added: ${missing}`)
   }
-
-  return Promise.all(promises)
 }

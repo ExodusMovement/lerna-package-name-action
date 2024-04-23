@@ -6,6 +6,7 @@ import * as core from '@actions/core'
 
 jest.mock('@actions/core', () => ({
   notice: jest.fn(),
+  warning: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
 }))
@@ -121,6 +122,39 @@ describe('labelPr', () => {
       issue_number: Number(issueNumber),
       labels: ['storage-mobile'],
     })
+  })
+
+  it('should apply a maximum of 100 labels', async () => {
+    const labels = [...Array.from({ length: 200 }).keys()].map((i) => `package-${i}`)
+
+    fs = Volume.fromJSON({
+      'lerna.json': lernaConfig,
+      'modules/no-longer-affected/package.json': 'some content',
+      ...Object.fromEntries(labels.map((name) => [`modules/${name}/package.json`, 'some content'])),
+    })
+
+    when(exec)
+      .calledWith(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
+      .mockResolvedValue({
+        stderr: '',
+        stdout: labels.map((name) => `modules/${name}/package.json`).join(' '),
+      })
+
+    mockLabels(['dependencies', 'blockchain-metadata', 'no-longer-affected'])
+
+    await labelPr({
+      filesystem: fs as never,
+      issueNumber,
+      sha,
+      baseSha,
+      client,
+      exec,
+    })
+
+    expect(jest.mocked(client.rest.issues.addLabels).mock.calls[0]![0]!.labels!.length).toBe(98)
+    expect(core.warning).toHaveBeenCalledWith(
+      'Applying only 98 labels to avoid exceeding the maximum of 100 labels per PR'
+    )
   })
 
   it('should remove labels of packages no longer affected', async () => {
