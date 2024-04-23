@@ -3,7 +3,6 @@ import { Volume } from 'memfs/lib/volume'
 import { when } from 'jest-when'
 import labelPr from './label-pr'
 import * as core from '@actions/core'
-import mocked = jest.mocked
 
 jest.mock('@actions/core', () => ({
   notice: jest.fn(),
@@ -152,7 +151,7 @@ describe('labelPr', () => {
       exec,
     })
 
-    expect(mocked(client.rest.issues.addLabels).mock.calls[0]![0]!.labels!.length).toBe(98)
+    expect(jest.mocked(client.rest.issues.addLabels).mock.calls[0]![0]!.labels!.length).toBe(98)
     expect(core.warning).toHaveBeenCalledWith(
       `Applying only 98 labels to avoid exceeding the maximum of 100 labels per PR`
     )
