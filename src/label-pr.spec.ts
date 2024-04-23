@@ -153,7 +153,7 @@ describe('labelPr', () => {
 
     expect(jest.mocked(client.rest.issues.addLabels).mock.calls[0]![0]!.labels!.length).toBe(98)
     expect(core.warning).toHaveBeenCalledWith(
-      `Applying only 98 labels to avoid exceeding the maximum of 100 labels per PR`
+      'Applying only 98 labels to avoid exceeding the maximum of 100 labels per PR'
     )
   })
 
