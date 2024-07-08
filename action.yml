@@ -4,6 +4,10 @@ inputs:
   github-token:
     description: 'Token for the repository. Can be passed in using {{ secrets.GITHUB_TOKEN }}'
     required: true
+  include-scope:
+    description: 'Label by full package name including the scope (e.g. @exodus/test)'
+    required: false
+    default: false
 runs:
   using: 'node16'
   main: 'dist/index.js'

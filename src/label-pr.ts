@@ -1,11 +1,10 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import { getPackagePaths } from '@exodus/lerna-utils'
+import { getPathsByPackageNames } from '@exodus/lerna-utils'
 
 import * as fs from 'node:fs'
 
 import { Exec, OctoClient } from './helpers/types'
-import { getPackageFolderName } from './helpers/package'
 import { exec as promisifiedExec } from './helpers/process'
 import { difference } from './helpers/array'
 
@@ -14,6 +13,7 @@ type Params = {
   sha: string
   baseSha: string
   client: OctoClient
+  includeScope?: boolean
   filesystem?: typeof fs
   exec?: Exec
 }
@@ -26,31 +26,32 @@ export default async function labelPr({
   sha,
   baseSha,
   client,
+  includeScope = false,
   filesystem = fs,
   exec = promisifiedExec,
 }: Params) {
   if (!HEX_LIKE_STRING.test(baseSha) || !HEX_LIKE_STRING.test(sha))
     throw new Error('Security: unexpected ref(s)')
 
+  const label = (packageName: string) =>
+    includeScope ? packageName : packageName.split('/').pop()! // eslint-disable-line @typescript-eslint/no-non-null-assertion
+
   core.debug(`Executing git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
   const { stdout } = await exec(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
   core.debug(stdout)
 
-  const packageFolderPaths = await getPackagePaths({ filesystem })
-  core.debug(`Package folder paths: ${packageFolderPaths}`)
-
+  const byPackageName = await getPathsByPackageNames({ filesystem })
   const changes = stdout.trim().split(' ')
-
-  const affected = packageFolderPaths
-    .filter((packagePath) => changes.some((change) => change.startsWith(`${packagePath}/`)))
-    .map((packageFolderPath) => getPackageFolderName(packageFolderPath))
+  const affected = Object.entries(byPackageName)
+    .filter(([, packagePath]) => changes.some((change) => change.startsWith(`${packagePath}/`)))
+    .map(([packageName]) => label(packageName))
 
   const { data } = await client.rest.pulls.get({
     ...github.context.repo,
     pull_number: Number(issueNumber),
   })
 
-  const packageNames = new Set(packageFolderPaths.map((it) => getPackageFolderName(it)))
+  const packageNames = new Set(Object.keys(byPackageName).map(label))
   const current = data.labels.map((label) => label.name).filter((label) => packageNames.has(label))
   const obsolete = difference(current, affected)
   let missing = difference(affected, current)

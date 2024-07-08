@@ -1,9 +1,11 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import labelPr from './label-pr'
+import { Input } from './constants'
 
 async function main() {
-  const token = core.getInput('github-token', { required: true })
+  const token = core.getInput(Input.GithubToken, { required: true })
+  const includeScope = core.getInput(Input.IncludeScope) === 'true'
 
   const {
     payload: { pull_request: pullRequest },
@@ -28,6 +30,7 @@ async function main() {
     issueNumber: pullRequest.number,
     sha: headSha,
     baseSha: baseSha,
+    includeScope,
   })
 }
 

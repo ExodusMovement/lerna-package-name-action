@@ -57,15 +57,15 @@ describe('labelPr', () => {
 
     fs = Volume.fromJSON({
       'lerna.json': lernaConfig,
-      'modules/storage-mobile/package.json': 'some content',
-      'unmanaged/something/package.json': 'some content',
-      'modules/config/package.json': 'some content',
-      'libraries/formatting/package.json': 'some content',
+      'modules/storage-mobile/package.json': JSON.stringify({ name: '@exodus/storage-mobile' }),
+      'unmanaged/something/package.json': JSON.stringify({ name: '@exodus/something' }),
+      'modules/config/package.json': JSON.stringify({ name: '@exodus/config' }),
+      'libraries/formatting/package.json': JSON.stringify({ name: '@exodus/formatting' }),
     })
     exec = jest.fn()
   })
 
-  it('should add labels managed packages', async () => {
+  it('should add labels of managed packages', async () => {
     when(exec)
       .calledWith(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
       .mockResolvedValue({
@@ -91,12 +91,39 @@ describe('labelPr', () => {
     })
   })
 
+  it('should add scoped labels of managed packages if configured to', async () => {
+    when(exec)
+      .calledWith(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
+      .mockResolvedValue({
+        stderr: '',
+        stdout:
+          '.github/workflows/label.yaml modules/storage-mobile/package.json libraries/formatting/package.json unmanaged/something/package.json',
+      })
+    mockLabels([])
+
+    await labelPr({
+      filesystem: fs as never,
+      issueNumber,
+      sha,
+      baseSha,
+      includeScope: true,
+      client,
+      exec,
+    })
+
+    expect(client.rest.issues.addLabels).toHaveBeenCalledWith({
+      ...mockRepo,
+      issue_number: Number(issueNumber),
+      labels: ['@exodus/formatting', '@exodus/storage-mobile'],
+    })
+  })
+
   it('should not apply labels of partially included package names', async () => {
     fs = Volume.fromJSON({
       'lerna.json': lernaConfig,
-      'modules/storage-mobile/package.json': 'some content',
-      'modules/storage/package.json': 'some content',
-      'libraries/formatting/package.json': 'some content',
+      'modules/storage-mobile/package.json': JSON.stringify({ name: '@exodus/storage-mobile' }),
+      'modules/storage/package.json': JSON.stringify({ name: '@exodus/storage' }),
+      'libraries/formatting/package.json': JSON.stringify({ name: '@exodus/formatting' }),
     })
 
     when(exec)
@@ -129,8 +156,10 @@ describe('labelPr', () => {
 
     fs = Volume.fromJSON({
       'lerna.json': lernaConfig,
-      'modules/no-longer-affected/package.json': 'some content',
-      ...Object.fromEntries(labels.map((name) => [`modules/${name}/package.json`, 'some content'])),
+      'modules/no-longer-affected/package.json': JSON.stringify({ name: 'no-longer-affected' }),
+      ...Object.fromEntries(
+        labels.map((name) => [`modules/${name}/package.json`, JSON.stringify({ name })])
+      ),
     })
 
     when(exec)
