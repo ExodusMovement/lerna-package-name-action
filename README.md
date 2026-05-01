@@ -20,7 +20,7 @@ jobs:
     name: Label PR
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
           # required for diff
           fetch-depth: 0
