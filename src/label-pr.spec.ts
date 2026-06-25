@@ -67,7 +67,7 @@ describe('labelPr', () => {
 
   it('should add labels managed packages', async () => {
     when(exec)
-      .calledWith(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
       .mockResolvedValue({
         stderr: '',
         stdout:
@@ -91,6 +91,34 @@ describe('labelPr', () => {
     })
   })
 
+  it('rebases repo-root-relative changes into a subdirectory workspace before labelling', async () => {
+    when(exec)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
+      .mockResolvedValue({
+        stderr: '',
+        // git returns repo-root-relative paths; the workspace lives under apps/mobile.
+        stdout:
+          'apps/mobile/modules/storage-mobile/package.json apps/mobile/libraries/formatting/package.json .github/workflows/label.yaml',
+      })
+    mockLabels([])
+
+    await labelPr({
+      filesystem: fs as never,
+      issueNumber,
+      sha,
+      baseSha,
+      client,
+      exec,
+      repoRelativePrefix: 'apps/mobile',
+    })
+
+    expect(client.rest.issues.addLabels).toHaveBeenCalledWith({
+      ...mockRepo,
+      issue_number: Number(issueNumber),
+      labels: ['formatting', 'storage-mobile'],
+    })
+  })
+
   it('should not apply labels of partially included package names', async () => {
     fs = Volume.fromJSON({
       'lerna.json': lernaConfig,
@@ -100,7 +128,7 @@ describe('labelPr', () => {
     })
 
     when(exec)
-      .calledWith(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
       .mockResolvedValue({
         stderr: '',
         stdout: 'modules/storage-mobile/package.json',
@@ -134,7 +162,7 @@ describe('labelPr', () => {
     })
 
     when(exec)
-      .calledWith(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
       .mockResolvedValue({
         stderr: '',
         stdout: labels.map((name) => `modules/${name}/package.json`).join(' '),
@@ -159,7 +187,7 @@ describe('labelPr', () => {
 
   it('should remove labels of packages no longer affected', async () => {
     when(exec)
-      .calledWith(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
       .mockResolvedValue({
         stderr: '',
         stdout: '.github/workflows/label.yaml modules/storage-mobile/package.json',
@@ -190,7 +218,7 @@ describe('labelPr', () => {
 
   it('should not alter PR and create annotation if affected unchanged', async () => {
     when(exec)
-      .calledWith(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
       .mockResolvedValue({
         stderr: '',
         stdout: '.github/workflows/label.yaml modules/storage-mobile/package.json',
@@ -211,6 +239,29 @@ describe('labelPr', () => {
     expect(core.notice).toHaveBeenCalledWith(
       'Affected packages have not changed. Labels need not be updated.'
     )
+  })
+
+  it.each([
+    ['no working directory', ''],
+    ['a subdirectory working directory', 'apps/mobile'],
+  ])('adds no labels when nothing changed (%s)', async (_label, repoRelativePrefix) => {
+    when(exec)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
+      .mockResolvedValue({ stderr: '', stdout: '' })
+    mockLabels([])
+
+    await labelPr({
+      filesystem: fs as never,
+      issueNumber,
+      sha,
+      baseSha,
+      client,
+      exec,
+      repoRelativePrefix,
+    })
+
+    expect(client.rest.issues.addLabels).not.toHaveBeenCalled()
+    expect(client.rest.issues.removeLabel).not.toHaveBeenCalled()
   })
 
   function mockLabels(labels: string[]) {
