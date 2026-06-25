@@ -8,6 +8,7 @@ import { Exec, OctoClient } from './helpers/types'
 import { getPackageFolderName } from './helpers/package'
 import { exec as promisifiedExec } from './helpers/process'
 import { difference } from './helpers/array'
+import { toWorkspaceRelativePaths } from './helpers/working-directory'
 
 type Params = {
   issueNumber: number
@@ -16,6 +17,11 @@ type Params = {
   client: OctoClient
   filesystem?: typeof fs
   exec?: Exec
+  // Working directory's path relative to the repo root. git diff returns
+  // repo-root-relative paths; package paths are cwd-relative, so changed
+  // files are rebased into the working directory before attribution. Empty
+  // when the action runs at the repo root.
+  repoRelativePrefix?: string
 }
 
 const HEX_LIKE_STRING = /^(?:[\da-f]{2})+$/
@@ -28,18 +34,24 @@ export default async function labelPr({
   client,
   filesystem = fs,
   exec = promisifiedExec,
+  repoRelativePrefix = '',
 }: Params) {
   if (!HEX_LIKE_STRING.test(baseSha) || !HEX_LIKE_STRING.test(sha))
     throw new Error('Security: unexpected ref(s)')
 
-  core.debug(`Executing git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
-  const { stdout } = await exec(`git diff --merge-base --name-only ${baseSha} ${sha} | xargs`)
+  // `--no-relative` forces repo-root-relative paths regardless of the
+  // consumer's `diff.relative` git config, so attribution stays correct when
+  // the action runs from a subdirectory.
+  core.debug(`Executing git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
+  const { stdout } = await exec(
+    `git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`
+  )
   core.debug(stdout)
 
   const packageFolderPaths = await getPackagePaths({ filesystem })
   core.debug(`Package folder paths: ${packageFolderPaths}`)
 
-  const changes = stdout.trim().split(' ')
+  const changes = toWorkspaceRelativePaths(stdout.trim().split(' '), repoRelativePrefix)
 
   const affected = packageFolderPaths
     .filter((packagePath) => changes.some((change) => change.startsWith(`${packagePath}/`)))
