@@ -14,6 +14,13 @@ type Params = {
   issueNumber: number
   sha: string
   baseSha: string
+  // Current base branch name. The payload's base.sha is frozen when the PR is
+  // created, so once the head catches up with the base (rebase or merge from
+  // it), diffing against it attributes every commit the base gained since —
+  // mislabelling the PR with packages it never touched. origin/<baseRef> is
+  // fetched at run time, so it is preferred; baseSha remains the fallback for
+  // checkouts that lack the remote ref.
+  baseRef?: string
   client: OctoClient
   filesystem?: typeof fs
   exec?: Exec
@@ -25,12 +32,38 @@ type Params = {
 }
 
 const HEX_LIKE_STRING = /^(?:[\da-f]{2})+$/
+// Conservative allowlist keeping the ref safe for shell interpolation; git
+// refnames additionally forbid space, ~, ^, :, ?, *, [, .. and @{.
+const SAFE_REF = /^[\w./-]+$/
 const MAX_LABELS_PER_PR = 100
+
+async function resolveBase({
+  baseRef,
+  baseSha,
+  exec,
+}: {
+  baseRef?: string
+  baseSha: string
+  exec: Exec
+}): Promise<string> {
+  if (!baseRef || !SAFE_REF.test(baseRef)) return baseSha
+
+  try {
+    const { stdout } = await exec(`git rev-parse origin/${baseRef}`)
+    const resolved = stdout.trim()
+    if (HEX_LIKE_STRING.test(resolved)) return resolved
+  } catch {
+    core.warning(`Could not resolve origin/${baseRef}; falling back to the event's base sha`)
+  }
+
+  return baseSha
+}
 
 export default async function labelPr({
   issueNumber,
   sha,
   baseSha,
+  baseRef,
   client,
   filesystem = fs,
   exec = promisifiedExec,
@@ -39,12 +72,14 @@ export default async function labelPr({
   if (!HEX_LIKE_STRING.test(baseSha) || !HEX_LIKE_STRING.test(sha))
     throw new Error('Security: unexpected ref(s)')
 
+  const base = await resolveBase({ baseRef, baseSha, exec })
+
   // `--no-relative` forces repo-root-relative paths regardless of the
   // consumer's `diff.relative` git config, so attribution stays correct when
   // the action runs from a subdirectory.
-  core.debug(`Executing git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
+  core.debug(`Executing git diff --merge-base --no-relative --name-only ${base} ${sha} | xargs`)
   const { stdout } = await exec(
-    `git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`
+    `git diff --merge-base --no-relative --name-only ${base} ${sha} | xargs`
   )
   core.debug(stdout)
 
