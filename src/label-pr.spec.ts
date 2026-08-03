@@ -264,6 +264,123 @@ describe('labelPr', () => {
     expect(client.rest.issues.removeLabel).not.toHaveBeenCalled()
   })
 
+  it('diffs against the current origin/<baseRef>, not the stale payload base sha', async () => {
+    const currentBaseSha = 'aaaabbbbccccddddeeeeffff0000111122223333'
+
+    when(exec)
+      .calledWith('git rev-parse origin/master')
+      .mockResolvedValue({ stderr: '', stdout: `${currentBaseSha}\n` })
+    // Diffing against the payload base sha (frozen at PR creation) would
+    // attribute everything the base branch gained since — e.g. after a rebase.
+    when(exec)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
+      .mockResolvedValue({
+        stderr: '',
+        stdout:
+          'modules/config/package.json modules/storage-mobile/package.json libraries/formatting/package.json',
+      })
+    when(exec)
+      .calledWith(
+        `git diff --merge-base --no-relative --name-only ${currentBaseSha} ${sha} | xargs`
+      )
+      .mockResolvedValue({ stderr: '', stdout: 'modules/storage-mobile/package.json' })
+    mockLabels([])
+
+    await labelPr({
+      filesystem: fs as never,
+      issueNumber,
+      sha,
+      baseSha,
+      baseRef: 'master',
+      client,
+      exec,
+    })
+
+    expect(client.rest.issues.addLabels).toHaveBeenCalledWith({
+      ...mockRepo,
+      issue_number: Number(issueNumber),
+      labels: ['storage-mobile'],
+    })
+  })
+
+  it('falls back to the payload base sha when origin/<baseRef> cannot be resolved', async () => {
+    when(exec)
+      .calledWith('git rev-parse origin/gone')
+      .mockRejectedValue(new Error('unknown revision'))
+    when(exec)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
+      .mockResolvedValue({ stderr: '', stdout: 'modules/storage-mobile/package.json' })
+    mockLabels([])
+
+    await labelPr({
+      filesystem: fs as never,
+      issueNumber,
+      sha,
+      baseSha,
+      baseRef: 'gone',
+      client,
+      exec,
+    })
+
+    expect(core.warning).toHaveBeenCalledWith(
+      "Could not resolve origin/gone; falling back to the event's base sha"
+    )
+    expect(client.rest.issues.addLabels).toHaveBeenCalledWith({
+      ...mockRepo,
+      issue_number: Number(issueNumber),
+      labels: ['storage-mobile'],
+    })
+  })
+
+  it('falls back when rev-parse returns something other than a sha', async () => {
+    when(exec)
+      .calledWith('git rev-parse origin/master')
+      .mockResolvedValue({ stderr: '', stdout: 'warning: not a sha\n' })
+    when(exec)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
+      .mockResolvedValue({ stderr: '', stdout: 'modules/storage-mobile/package.json' })
+    mockLabels([])
+
+    await labelPr({
+      filesystem: fs as never,
+      issueNumber,
+      sha,
+      baseSha,
+      baseRef: 'master',
+      client,
+      exec,
+    })
+
+    expect(client.rest.issues.addLabels).toHaveBeenCalledWith({
+      ...mockRepo,
+      issue_number: Number(issueNumber),
+      labels: ['storage-mobile'],
+    })
+  })
+
+  it('never interpolates an unsafe base ref into the shell', async () => {
+    const evil = '$(touch /tmp/pwned)'
+
+    when(exec)
+      .calledWith(`git diff --merge-base --no-relative --name-only ${baseSha} ${sha} | xargs`)
+      .mockResolvedValue({ stderr: '', stdout: '' })
+    mockLabels([])
+
+    await labelPr({
+      filesystem: fs as never,
+      issueNumber,
+      sha,
+      baseSha,
+      baseRef: evil,
+      client,
+      exec,
+    })
+
+    for (const call of (exec as jest.Mock).mock.calls) {
+      expect(call[0]).not.toContain(evil)
+    }
+  })
+
   function mockLabels(labels: string[]) {
     when(client.rest.pulls.get)
       .calledWith({

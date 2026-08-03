@@ -20,8 +20,11 @@ async function main() {
 
   const headSha = pullRequest.head.sha
   const baseSha = pullRequest.base.sha
+  const baseRef = pullRequest.base.ref
 
-  core.debug(`Labelling PR ${pullRequest.number} with head sha ${headSha} and base sha ${baseSha}`)
+  core.debug(
+    `Labelling PR ${pullRequest.number} with head sha ${headSha}, base ref ${baseRef} and base sha ${baseSha}`
+  )
 
   const client = github.getOctokit(token)
 
@@ -30,6 +33,7 @@ async function main() {
     issueNumber: pullRequest.number,
     sha: headSha,
     baseSha: baseSha,
+    baseRef,
     repoRelativePrefix,
   })
 }
